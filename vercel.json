@@ -1,0 +1,54 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "bunVersion": "1.x",
+  "installCommand": "bun install",
+  "buildCommand": "",
+  "outputDirectory": "public",
+  "functions": {
+    "api/server.js": {
+      "maxDuration": 300
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/api/server?__route=root"
+    },
+    {
+      "source": "/minecraft",
+      "destination": "/api/server?__route=minecraft"
+    },
+    {
+      "source": "/lan/host",
+      "destination": "/api/server?__route=lan-host"
+    },
+    {
+      "source": "/lan/join",
+      "destination": "/api/server?__route=lan-join"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/server?__route=health"
+    },
+    {
+      "source": "/admin",
+      "destination": "/api/server?__route=admin"
+    },
+    {
+      "source": "/admin/status",
+      "destination": "/api/server?__route=admin-status"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/play/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ]
+}

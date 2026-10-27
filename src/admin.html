@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Relay status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #E4E6EB;          /* smooth stone */
+    --surface: #F4F5F7;
+    --ink: #232129;         /* deepslate */
+    --muted: #5C5966;
+    --line: #C6C8CF;
+    --torch: #B97A0E;       /* torchlight, darkened for contrast on light */
+    --torch-glow: #F2B33D;
+    --lapis: #2F51AE;
+    --slot: #8B8B8B;
+    --slot-hi: #FFFFFF;
+    --slot-lo: #373737;
+    --slot-face: #C6C6C6;
+    --code-ink: #232129;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #232129;
+      --surface: #2C2A33;
+      --ink: #ECEAF2;
+      --muted: #A3A0AE;
+      --line: #3D3A46;
+      --torch: #F2B33D;
+      --torch-glow: #F2B33D;
+      --lapis: #7E9BEA;
+      --slot-face: #3A3742;
+      --slot-hi: #575363;
+      --slot-lo: #16151A;
+      --code-ink: #F7E7C4;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 1rem/1.55 "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 64rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+
+  header.top { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  .host { font-weight: 700; margin: 0; font-size: 1rem; }
+  .pulse { color: var(--muted); font-size: .9rem; display: inline-flex; align-items: center; gap: .5rem; }
+  .dot { width: .55rem; height: .55rem; border-radius: 50%; background: var(--torch-glow); box-shadow: 0 0 0 0 color-mix(in srgb, var(--torch-glow) 60%, transparent); animation: flicker 2.4s ease-out infinite; }
+  .pulse.stale .dot { background: var(--muted); animation: none; }
+  @keyframes flicker { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--torch-glow) 55%, transparent); } 70%, 100% { box-shadow: 0 0 0 .55rem transparent; } }
+
+  /* The headline is the live answer itself. */
+  h1.summary {
+    font-size: clamp(1.75rem, 4.2vw, 2.75rem);
+    line-height: 1.15;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 1.75rem 0 2.75rem;
+    max-width: 22ch;
+    text-wrap: balance;
+  }
+  h1.summary b { color: var(--torch); font-variant-numeric: tabular-nums; }
+
+  section { margin-top: 2.5rem; }
+  h2 { font-size: 1.15rem; margin: 0 0 1rem; display: flex; align-items: baseline; gap: .6rem; }
+  h2 .count { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+
+  /* LAN worlds: each join code is an inventory slot. */
+  .worlds { display: grid; grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr)); gap: 1rem; }
+  .world { background: var(--surface); border: 1px solid var(--line); border-radius: .5rem; padding: 1rem; display: grid; gap: .85rem; }
+  .slot {
+    display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+    background: var(--slot-face);
+    border: 3px solid; border-color: var(--slot-lo) var(--slot-hi) var(--slot-hi) var(--slot-lo);
+    padding: .55rem .6rem .55rem .9rem;
+  }
+  .code { font-family: "Pixelify Sans", ui-monospace, monospace; font-weight: 700; font-size: 1.85rem; letter-spacing: .12em; color: var(--code-ink); line-height: 1; }
+  .copy {
+    font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: .35rem; padding: .35rem .65rem;
+  }
+  .copy:hover { border-color: var(--torch); }
+  .copy[data-done] { color: var(--torch); border-color: var(--torch); }
+  .facts { display: grid; grid-template-columns: auto 1fr; gap: .2rem .9rem; margin: 0; font-size: .92rem; }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .kind { font-size: .85rem; color: var(--lapis); font-weight: 700; }
+
+  /* Players */
+  .players { background: var(--surface); border: 1px solid var(--line); border-radius: .5rem; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 40rem; }
+  th, td { text-align: left; padding: .7rem 1rem; white-space: nowrap; }
+  th { font-weight: 400; color: var(--muted); font-size: .88rem; border-bottom: 1px solid var(--line); }
+  tbody tr + tr td { border-top: 1px solid var(--line); }
+  td.num { font-variant-numeric: tabular-nums; }
+  .who { display: flex; align-items: center; gap: .65rem; font-weight: 700; }
+  .face { width: 1.6rem; height: 1.6rem; display: grid; place-items: center; font-family: "Pixelify Sans", monospace; font-size: .85rem; color: #fff; image-rendering: pixelated; }
+  .unknown { color: var(--muted); font-weight: 400; font-style: italic; }
+  .server { color: var(--lapis); }
+
+  .empty { color: var(--muted); background: var(--surface); border: 1px dashed var(--line); border-radius: .5rem; padding: 1.25rem; margin: 0; max-width: 60ch; }
+  .note { color: var(--muted); font-size: .9rem; margin-top: 3rem; max-width: 65ch; border-top: 1px solid var(--line); padding-top: 1rem; }
+  .note p { margin: .35rem 0; }
+  .error { color: #C0392B; font-weight: 700; }
+
+  :focus-visible { outline: 3px solid var(--lapis); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <p class="host" id="host">Relay</p>
+    <span class="pulse stale" id="pulse" role="status" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="pulse-text">Connecting…</span></span>
+  </header>
+
+  <h1 class="summary" id="summary">Checking who’s here…</h1>
+
+  <section aria-labelledby="worlds-h">
+    <h2 id="worlds-h">Open LAN worlds <span class="count" id="worlds-count"></span></h2>
+    <div id="worlds"></div>
+  </section>
+
+  <section aria-labelledby="players-h">
+    <h2 id="players-h">Players on servers <span class="count" id="players-count"></span></h2>
+    <div id="players"></div>
+  </section>
+
+  <footer class="note" id="note"></footer>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  $("host").textContent = location.host;
+  var data = null, clockSkew = 0, lastOk = 0, failing = false;
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  function since(ms) {
+    var s = Math.max(0, Math.floor((Date.now() + clockSkew - ms) / 1000));
+    if (s < 60) return s + "s";
+    var m = Math.floor(s / 60);
+    if (m < 60) return m + "m " + (s % 60) + "s";
+    return Math.floor(m / 60) + "h " + (m % 60) + "m";
+  }
+  function bytes(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + " MB";
+    return (n / 1073741824).toFixed(2) + " GB";
+  }
+  function flag(cc) {
+    if (!cc || !/^[A-Z]{2}$/.test(cc)) return "";
+    return String.fromCodePoint(0x1F1E6 + cc.charCodeAt(0) - 65, 0x1F1E6 + cc.charCodeAt(1) - 65) + " ";
+  }
+  function place(s) {
+    var parts = [s.city, s.region, s.country].filter(Boolean);
+    return parts.length ? flag(s.country) + esc(parts.join(", ")) : '<span class="unknown">Unknown</span>';
+  }
+  function faceColor(name) {
+    var h = 0;
+    for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    return "hsl(" + (h % 360) + " 45% 42%)";
+  }
+
+  function render() {
+    if (!data) return;
+    var worlds = data.sessions.filter(function (s) { return s.kind === "lan"; });
+    var players = data.sessions.filter(function (s) { return s.kind === "player"; });
+    worlds.sort(function (a, b) { return b.since - a.since; });
+    players.sort(function (a, b) { return a.since - b.since; });
+    var guests = worlds.reduce(function (n, w) { return n + w.guests; }, 0);
+
+    // Headline
+    if (!worlds.length && !players.length) {
+      $("summary").textContent = "Nobody is using the relay right now.";
+    } else {
+      var bits = [];
+      if (players.length) bits.push("<b>" + players.length + "</b> " + (players.length === 1 ? "player is" : "players are") + " on servers");
+      if (worlds.length) bits.push("<b>" + worlds.length + "</b> LAN " + (worlds.length === 1 ? "world is" : "worlds are") + " open");
+      $("summary").innerHTML = bits.join(" and ") + ".";
+    }
+
+    // LAN worlds
+    $("worlds-count").textContent = worlds.length ? String(worlds.length) : "";
+    if (!worlds.length) {
+      $("worlds").innerHTML = '<p class="empty">No LAN worlds are open. When someone opens their world to LAN through this relay, its join code shows up here.</p>';
+    } else {
+      $("worlds").innerHTML = '<div class="worlds">' + worlds.map(function (w) {
+        return '<article class="world">' +
+          '<div class="slot"><span class="code" aria-label="Join code ' + esc(w.code.split("").join(" ")) + '">' + esc(w.code) + '</span>' +
+          '<button class="copy" type="button" data-code="' + esc(w.code) + '">Copy</button></div>' +
+          '<span class="kind">' + (w.mode === "p2p" ? "Direct connection (WebRTC)" : "Routed through the relay") + '</span>' +
+          '<dl class="facts">' +
+            '<dt>Open for</dt><dd data-since="' + w.since + '">' + since(w.since) + '</dd>' +
+            '<dt>Guests</dt><dd>' + (w.mode === "p2p"
+              ? plural(w.joinedTotal, "joined", "joined") + (w.guests ? ", " + w.guests + " connecting" : "")
+              : w.guests + " now, " + w.joinedTotal + " total") + '</dd>' +
+            '<dt>Host from</dt><dd>' + place(w) + '</dd>' +
+            (w.mode === "relayed" ? '<dt>Data</dt><dd>' + bytes(w.up + w.down) + '</dd>' : "") +
+          '</dl></article>';
+      }).join("") + "</div>";
+    }
+
+    // Players
+    $("players-count").textContent = players.length ? String(players.length) : "";
+    if (!players.length) {
+      $("players").innerHTML = '<p class="empty">No one is connected to a Java server through the relay. Players appear here as soon as they join one.</p>';
+    } else {
+      $("players").innerHTML = '<div class="players"><table><thead><tr>' +
+        '<th scope="col">Player</th><th scope="col">Server</th><th scope="col">Online for</th><th scope="col">Data</th><th scope="col">From</th>' +
+        '</tr></thead><tbody>' + players.map(function (p) {
+          var who = p.name
+            ? '<span class="face" style="background:' + faceColor(p.name) + '" aria-hidden="true">' + esc(p.name.charAt(0).toUpperCase()) + '</span>' + esc(p.name)
+            : '<span class="face" style="background:var(--slot)" aria-hidden="true">?</span><span class="unknown">Logging in…</span>';
+          return '<tr><td><span class="who">' + who + '</span></td>' +
+            '<td class="server">' + esc(p.server) + '</td>' +
+            '<td class="num" data-since="' + p.since + '">' + since(p.since) + '</td>' +
+            '<td class="num">' + bytes(p.up + p.down) + '</td>' +
+            '<td>' + place(p) + '</td></tr>';
+        }).join("") + "</tbody></table></div>";
+    }
+
+    // Footnote
+    var note = "";
+    if (data.vercel) note += "<p>Vercel closes every connection after " + Math.round(data.sessionLimitSeconds / 60) + " minutes, so people dropping and reconnecting is normal.</p>";
+    if (!data.shared && data.vercel) {
+      note += "<p>This list only covers one server instance. Add Redis to the project in Vercel (Storage) to see everyone, and to make LAN join codes work for all players.</p>";
+    } else if (data.shared) {
+      note += "<p>Showing " + plural(data.instances, "relay instance", "relay instances") + ". Updates every 3 seconds.</p>";
+    } else {
+      note += "<p>Updates every 3 seconds.</p>";
+    }
+    $("note").innerHTML = note;
+  }
+
+  function tick() {
+    var nodes = document.querySelectorAll("[data-since]");
+    for (var i = 0; i < nodes.length; i++) nodes[i].textContent = since(Number(nodes[i].getAttribute("data-since")));
+    var p = $("pulse");
+    if (failing) {
+      p.className = "pulse stale";
+    } else if (lastOk) {
+      var age = Math.floor((Date.now() - lastOk) / 1000);
+      p.className = age > 10 ? "pulse stale" : "pulse";
+      $("pulse-text").textContent = age < 2 ? "Live" : "Updated " + age + "s ago";
+    }
+  }
+
+  function poll() {
+    fetch("/admin/status", { cache: "no-store", credentials: "same-origin" })
+      .then(function (r) {
+        if (r.status === 401) { location.reload(); throw new Error("signed out"); }
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function (json) {
+        data = json; clockSkew = json.now - Date.now(); lastOk = Date.now(); failing = false;
+        render(); tick();
+      })
+      .catch(function (e) {
+        failing = true;
+        $("pulse-text").innerHTML = '<span class="error">Can’t reach the relay (' + esc(e.message) + "). Retrying.</span>";
+        tick();
+      });
+  }
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest ? e.target.closest(".copy") : null;
+    if (!btn) return;
+    var code = btn.getAttribute("data-code");
+    (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(function () {
+      btn.textContent = "Copied"; btn.setAttribute("data-done", "");
+      setTimeout(function () { btn.textContent = "Copy"; btn.removeAttribute("data-done"); }, 1500);
+    }, function () { btn.textContent = code; });
+  });
+
+  poll();
+  setInterval(poll, 3000);
+  setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>

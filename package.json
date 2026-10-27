@@ -1,0 +1,22 @@
+{
+  "name": "eagler-relay-vercel",
+  "version": "26.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/entry.ts --target=bun --format=esm --minify-syntax --minify-whitespace --outfile api/server.js && sed -i.bak -E 's#from\"(dns/promises|crypto)\"#from\"node:\\1\"#g' api/server.js && rm -f api/server.js.bak",
+    "dev": "bun --watch src/entry.ts",
+    "start": "bun api/server.js",
+    "client": "bun scripts/prepare-client.ts",
+    "token": "bun scripts/token.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "4.13.14"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.4",
+    "typescript": "5.9.3"
+  }
+}
