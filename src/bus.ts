@@ -2,7 +2,7 @@
 //
 // On Vercel, every WebSocket is pinned to whatever function instance accepted it, and a
 // LAN host and its guests can easily land on different instances. When REDIS_URL (or
-// KV_URL) is set, room codes live in Redis and packets between instances travel over
+// KV_URL, optionally with a prefix like PLAYERS_REDIS_URL) is set, room codes live in Redis and packets between instances travel over
 // Redis pub/sub using Bun's built-in client (no npm dependency). Without Redis everything
 // stays in memory, which is fine for a VPS / `bun run` or a single warm Vercel instance.
 import { RedisClient } from "bun";
@@ -222,7 +222,20 @@ class RedisBus extends LocalBus {
   }
 }
 
-export function createBus(redisUrl = process.env.REDIS_URL || process.env.KV_URL): Bus {
+/**
+ * REDIS_URL or KV_URL, or the same with a custom prefix: Vercel's Upstash integration names
+ * them e.g. PLAYERS_REDIS_URL when the store is given the prefix "PLAYERS".
+ * The *_KV_REST_API_URL variables are HTTP-only and can't be used here.
+ */
+export function redisUrlFrom(env: Record<string, string | undefined>): string {
+  if (env.REDIS_URL) return env.REDIS_URL;
+  if (env.KV_URL) return env.KV_URL;
+  const keys = Object.keys(env).filter((k) => env[k] && /_(REDIS|KV)_URL$/.test(k)).sort();
+  const key = keys.find((k) => k.endsWith("_REDIS_URL")) ?? keys[0];
+  return key ? env[key]! : "";
+}
+
+export function createBus(redisUrl = redisUrlFrom(process.env)): Bus {
   if (!redisUrl) return new LocalBus();
   return new RedisBus(redisUrl);
 }

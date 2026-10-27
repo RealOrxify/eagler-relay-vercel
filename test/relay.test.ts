@@ -4,7 +4,7 @@ import { createRelay, type Relay } from "../src/relay.ts";
 import { createToken, verifyToken, verifyScopedToken, createScopedToken } from "../src/auth.ts";
 import { isPrivateTarget, makeHandshake, makeLoginStart, parseLoginStartName, parseTarget, validateMinecraftHandshake } from "../src/protocol.ts";
 import { parseHostFrame, peerFrame } from "../src/lan-rooms.ts";
-import { createBus } from "../src/bus.ts";
+import { createBus, redisUrlFrom } from "../src/bus.ts";
 
 // ---------- helpers ----------
 type Msg = string | Uint8Array;
@@ -129,6 +129,15 @@ test("lan frame codec", () => {
   const p = parseHostFrame(f);
   expect(p.peerId).toBe("abcdef0123456789");
   expect([...p.payload]).toEqual([9, 8, 7]);
+});
+
+test("redisUrlFrom finds plain and prefixed Redis variables", () => {
+  expect(redisUrlFrom({})).toBe("");
+  expect(redisUrlFrom({ REDIS_URL: "redis://a", PLAYERS_REDIS_URL: "redis://b" })).toBe("redis://a");
+  expect(redisUrlFrom({ KV_URL: "redis://k" })).toBe("redis://k");
+  expect(redisUrlFrom({ PLAYERS_KV_URL: "rediss://kv", PLAYERS_REDIS_URL: "rediss://r" })).toBe("rediss://r");
+  expect(redisUrlFrom({ PLAYERS_KV_URL: "rediss://kv" })).toBe("rediss://kv");
+  expect(redisUrlFrom({ PLAYERS_KV_REST_API_URL: "https://rest" })).toBe(""); // HTTP-only, unusable
 });
 
 // ---------- integration ----------

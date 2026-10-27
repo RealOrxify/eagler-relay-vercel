@@ -12,7 +12,7 @@ import adminPageText from "./admin.html" with { type: "text" };
 const ADMIN_PAGE = adminPageText as unknown as string; // text import (Bun types assume an HTML bundle)
 import { Hono, type Context } from "hono";
 import type { Server, WebSocketHandler } from "bun";
-import { createBus, randomId, type Bus } from "./bus.ts";
+import { createBus, randomId, redisUrlFrom, type Bus } from "./bus.ts";
 import { loadConfig, type RelayConfig } from "./config.ts";
 import { verifyScopedToken, verifyToken } from "./auth.ts";
 import { isPrivateTarget, parseTarget } from "./protocol.ts";
@@ -76,7 +76,7 @@ export type Relay = {
 
 export function createRelay(opts: { config?: Partial<RelayConfig>; env?: Record<string, string | undefined>; bus?: Bus } = {}): Relay {
   const cfg = loadConfig(opts.env ?? process.env, opts.config);
-  const bus = opts.bus ?? createBus(opts.env ? (opts.env.REDIS_URL || opts.env.KV_URL || "") : undefined);
+  const bus = opts.bus ?? createBus(opts.env ? redisUrlFrom(opts.env) : undefined);
   const deps: Deps = { cfg, bus };
   const sessions = new Map<string, Session>();
   const metas = new Map<string, Meta>();

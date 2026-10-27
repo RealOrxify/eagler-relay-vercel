@@ -132,7 +132,7 @@ Tokens from the old Node and Cloudflare relays stay valid; the format is the sam
 | `RELAY_PUBLIC` | `1` | `0` requires tokens |
 | `RELAY_SECRET` | — | Required when private |
 | `RELAY_DEFAULT_SERVER` | — | `host:port` of your own Java server. `wss://your-app.vercel.app/minecraft` (no `?target=`) connects there. |
-| `REDIS_URL` / `KV_URL` | — | Enables cross-instance LAN rooms |
+| `REDIS_URL` / `KV_URL` | — | Enables cross-instance LAN rooms. Prefixed names from Vercel (e.g. `PLAYERS_REDIS_URL`) work too. |
 | `RELAY_VERCEL_MAX_DURATION` | `300` | Keep equal to `maxDuration` in `vercel.json` |
 | `RELAY_MAX_LIFETIME_MS` | auto | Overrides the per-connection cap |
 | `RELAY_ALLOWED_ORIGINS` | — | Comma-separated browser origins |
